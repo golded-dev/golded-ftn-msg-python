@@ -9,7 +9,7 @@ separate actions and require explicit authorization.
    It rebuilds from sdist and tests both MSG wheels with a local core wheel in
    separate clean environments outside the checkouts.
 4. Make the core repository available to GitHub Actions. CI defaults to
-   `golded-dev/golded-ftn`; set the `GOLDED_FTN_REPOSITORY` repository variable to
+   `golded-dev/golded-ftn-python`; set the `GOLDED_FTN_REPOSITORY` repository variable to
    the actual `owner/repository` when different. Its source must satisfy the lock.
    The checkout requires accessible hosting; local preparation does not confirm
    that hosting exists. Review CI results: Linux Python 3.12–3.14 runs checks and distribution testing;

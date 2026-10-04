@@ -76,7 +76,7 @@ def main() -> None:
             "uv",
             "build",
             "--wheel",
-            str(ROOT.parent / "golded-ftn"),
+            str(ROOT.parent / "golded-ftn-python"),
             "--out-dir",
             str(core_output),
             cwd=work,

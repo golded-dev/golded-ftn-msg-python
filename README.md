@@ -1,5 +1,9 @@
 # golded-ftn-msg
 
+Repository: [`golded-ftn-msg-python`](https://github.com/golded-dev/golded-ftn-msg-python).
+The distribution remains `golded-ftn-msg`; imports use `golded_ftn_msg`.
+The source is public on GitHub. This package has not been released on PyPI.
+
 Read FTSC and Opus `.MSG` areas with a 190-byte header; write classic FTSC headers.
 Python 3.12 or newer. MIT licensed. Version 1.1.0.
 
@@ -36,12 +40,12 @@ For local development, keep the two repositories beside each other:
 
 ```text
 golded-dev/
-  golded-ftn/
-  golded-ftn-msg/
+  golded-ftn-python/
+  golded-ftn-msg-python/
 ```
 
 ```sh
-cd golded-ftn-msg
+cd golded-ftn-msg-python
 uv sync --locked
 uv run pytest
 ```
@@ -50,7 +54,7 @@ uv run pytest
 metadata contains the version constraint only. To install local built wheels:
 
 ```sh
-uv build ../golded-ftn --out-dir /tmp/golded-wheels
+uv build ../golded-ftn-python --out-dir /tmp/golded-wheels
 uv build --out-dir /tmp/golded-wheels
 uv pip install /tmp/golded-wheels/*.whl
 ```

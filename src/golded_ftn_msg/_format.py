@@ -84,6 +84,24 @@ def parse_date(raw: bytes) -> datetime | None:
         return None
 
 
+def parse_opus_date(raw: bytes) -> datetime | None:
+    """Decode the written DOS date/time words at offsets 176 and 178."""
+    date, time = struct.unpack_from("<HH", raw, 176)
+    if date == time == 0:
+        return None
+    try:
+        return datetime(
+            1980 + (date >> 9),
+            (date >> 5) & 15,
+            date & 31,
+            time >> 11,
+            (time >> 5) & 63,
+            (time & 31) * 2,
+        )
+    except ValueError:
+        return None
+
+
 def format_date(value: datetime | None) -> bytes:
     if value is None:
         return b""

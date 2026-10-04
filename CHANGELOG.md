@@ -1,5 +1,12 @@
 # Changelog
 
+## 1.1.0 — Unreleased
+
+- Add explicit Opus reading with DOS written timestamps and kludge addresses.
+- Add opt-in archive mode with reported ASCII fallback, per-file skips and
+  an explicit stop for ambiguous numeric filenames. Strict FTSC reading and
+  writer behavior remain the defaults.
+
 ## 1.0.0
 
 - Reader and writer for classic FTSC-style `.MSG` areas with 190-byte headers.

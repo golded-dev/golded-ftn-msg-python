@@ -1,8 +1,9 @@
 # golded-ftn-msg
 
-This Python package reads and writes classic FTSC-style .MSG areas with a
-190-byte little-endian header. Shared values and protocols belong to golded-ftn.
-Opus headers, area discovery, databases and other formats are outside this package.
+This Python package reads FTSC and explicit Opus .MSG areas with a 190-byte
+header; the writer produces FTSC only. Opus timestamp words are not addresses.
+Shared values and protocols belong to golded-ftn. Discovery and databases belong
+to callers.
 
 Preserve message text, control lines and routing. Decode and encode strictly;
 mojibake repair is a caller decision. Keep absent metadata as None. Reconcile
@@ -18,3 +19,8 @@ sibling checkout used solely through uv development configuration.
 
 Edit this fragment or agent-compose.toml, then preview, build and check.
 Commits, remotes, tags and publication require an explicit request.
+
+Strict reading stays the default. Archive mode requires an issue callback and
+reports every recovery, skipped record and unsafe traversal stop. Keep source
+paths, identities and byte offsets in issues; keep message contents out. Callback
+failures propagate. Protect both modes with independent synthetic fixtures.

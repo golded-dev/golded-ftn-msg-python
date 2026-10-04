@@ -19,3 +19,8 @@ access material. Keep format changes backed by independent binary fixtures;
 round-trip tests alone can hide a shared reader/writer mistake.
 
 Describe the behaviour changed and the checks run. Keep unrelated changes out.
+
+Test FTSC and explicit Opus headers independently. Archive mode must report every
+recovery, skip or stop through the required callback, while strict mode retains
+its existing behavior. Use synthetic malformed files and callback failures in
+regressions; avoid exposing message text through issue descriptions.

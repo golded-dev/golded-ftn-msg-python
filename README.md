@@ -1,10 +1,10 @@
 # golded-ftn-msg
 
-Read and write classic FTSC-style `.MSG` areas with a 190-byte header.
-Python 3.12 or newer. MIT licensed. Version 1.0.0.
+Read FTSC and Opus `.MSG` areas with a 190-byte header; write classic FTSC headers.
+Python 3.12 or newer. MIT licensed. Version 1.1.0.
 
 The public API exports `MsgReader` and `MsgWriter`. Message values, options and
-protocols come from `golded-ftn>=1.0.0,<2`.
+protocols come from `golded-ftn>=1.1.0,<2`.
 
 ```python
 from pathlib import Path
@@ -57,6 +57,15 @@ uv pip install /tmp/golded-wheels/*.whl
 
 ## Behaviour and limits
 
+`MsgReader(header_format="ftsc")` is the default. Use `MsgReader("opus")`
+explicitly for Opus areas; there is no automatic header detection. Opus bytes
+176–183 contain DOS written/arrived timestamps rather than zone/point words.
+The written timestamp supplies a naive date with two-second precision, using
+1980–2107; zero or invalid written timestamps fall back to the textual date.
+Addresses use header net/node plus INTL/FMPT/TOPT, without treating timestamp
+bits as address metadata. Opus provenance uses `source_type="opus"`; FTSC
+provenance remains `"msg"`. The writer continues to produce FTSC headers.
+
 The reader accepts positive numeric filenames with case-insensitive `.msg`
 extensions. It sorts numerically and rejects duplicate message numbers.
 Filesystem errors identify missing or invalid area paths. Malformed message files
@@ -84,8 +93,32 @@ An external MSGID may be supplied; synthetic hash IDs cannot become MSGID.
 MSGID is never generated automatically. Provenance is not serialized. Body lines
 use CR and end with one null byte.
 
-This package does not interpret Opus headers, discover areas, handle other message
-formats, provide a database, or integrate with Nornir.
+## Archive mode
+
+Strict reading remains the default. For damaged archives, opt in explicitly:
+
+```python
+from golded_ftn import ReaderIssue, ReaderOptions
+from golded_ftn_msg import MsgReader
+
+issues: list[ReaderIssue] = []
+options = ReaderOptions(archive_mode=True, on_issue=issues.append)
+# Replace "messages" with the actual archive directory.
+messages = list(MsgReader("opus").read("messages", options))
+```
+
+Archive mode requires a callback. It skips malformed message files with a
+`record_parse_error` issue and continues to later files. If declared ASCII cannot
+decode a message, it tries the configured fallback strictly and reports
+`ascii_decode_fallback` after successful parsing. Invalid UTF-8 and address
+conflicts are skipped, never repaired. Original charset controls remain unchanged.
+Duplicate numeric filenames make identity ambiguous: the reader reports
+`duplicate_message_number` with action `stopped` before reading any messages.
+Callback exceptions propagate. `ReaderIssue` carries the source identity, action,
+code and a description without message contents. Recovery includes the failed
+ASCII byte offset; record errors without a known location use `None`.
+
+This package does not discover areas, provide a database, or integrate with Nornir.
 
 See [CONTRIBUTING.md](CONTRIBUTING.md), [SECURITY.md](SECURITY.md), and the
 [release checklist](docs/release.md).

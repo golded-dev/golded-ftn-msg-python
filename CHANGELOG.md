@@ -1,5 +1,15 @@
 # Changelog
 
+## 1.2.0 — 2026-10-05
+
+- Strip development-only uv sources from source distributions.
+
+- Add offline FTSC create/read/append/update/delete sessions and revision conflicts.
+- Preserve raw metadata, serialize Python sessions and roll back operation failures.
+- Keep Opus editing and GoldED coexistence disabled.
+
+- Preserve omitted routing during body edits and restore earlier operations correctly after handled I/O failures.
+
 ## 1.1.0 — Unreleased
 
 - Add explicit Opus reading with DOS written timestamps and kludge addresses.

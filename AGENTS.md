@@ -7,9 +7,12 @@ to callers.
 
 Preserve message text, control lines and routing. Decode and encode strictly;
 mojibake repair is a caller decision. Keep absent metadata as None. Reconcile
-header addresses with INTL/FMPT/TOPT and reject conflicts. Writers append through
-exclusive creation; failure cleanup removes only the current operation's file.
-Completed messages survive a later batch failure.
+header addresses with INTL/FMPT/TOPT and reject conflicts. Writer sessions use the core lock manager on a private numbering sidecar.
+Publish complete temporary files atomically without clobbering existing names;
+updates replace whole files offline. Preserve raw header metadata and text bytes
+unless explicitly patched. Rollback failures poison the session. GoldED must
+remain closed: its FidoArea lock and unlock methods are empty.
+Completed operations survive a later failure.
 
 Protect behavior with independent binary fixtures, including offsets, charset,
 date pivot, metadata conflicts and file creation failures. Run pytest, Ruff lint

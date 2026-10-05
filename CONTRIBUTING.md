@@ -24,3 +24,13 @@ Test FTSC and explicit Opus headers independently. Archive mode must report ever
 recovery, skip or stop through the required callback, while strict mode retains
 its existing behavior. Use synthetic malformed files and callback failures in
 regressions; avoid exposing message text through issue descriptions.
+
+Protect writer behavior through the public create/open/read/append/update/delete
+API and independent raw records. Check omitted patch fields, explicit clearing,
+controls in each supported physical placement, reply structures and unrelated
+message revisions. Use controlled helper processes for lock conflicts and the
+internal I/O seam for write, truncate, flush and rollback failures. Never reopen
+the lock file while its operation lock is held. Preserve existing lastread data.
+
+Keep GoldED closed during editing. A matching write lock alone does not prove
+safe concurrent reads or refresh; build interoperability remains deferred.

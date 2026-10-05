@@ -120,11 +120,11 @@ class MsgReader:
             yield message
 
     def _read_file(
-        self, file: Path, msgno: int, options: ReaderOptions
+        self, file: Path, msgno: int, options: ReaderOptions, raw: bytes | None = None
     ) -> tuple[ParsedMessage, ReaderIssue | None]:
         recovered: ReaderIssue | None = None
         try:
-            raw = file.read_bytes()
+            raw = file.read_bytes() if raw is None else raw
             if len(raw) < HEADER_SIZE:
                 raise ValueError(f"Header is shorter than {HEADER_SIZE} bytes")
             body_raw = raw[HEADER_SIZE:]

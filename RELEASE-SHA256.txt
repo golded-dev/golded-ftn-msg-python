@@ -1,0 +1,2 @@
+4f69a523cf1896cd73d507faff3091a731f1c48cb53c8547b48f15c5cfb3e17f  dist/golded_ftn_msg-1.2.0-py3-none-any.whl
+31145a59929ed79dc8bcd9ff17ab79a51296e93d214aa730c79e266defed1598  dist/golded_ftn_msg-1.2.0.tar.gz

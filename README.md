@@ -5,33 +5,30 @@ The distribution remains `golded-ftn-msg`; imports use `golded_ftn_msg`.
 The source is public on GitHub. This package has not been released on PyPI.
 
 Read FTSC and Opus `.MSG` areas with a 190-byte header; write classic FTSC headers.
-Python 3.12 or newer. MIT licensed. Version 1.1.0.
+Python 3.12 or newer. MIT licensed. Version 1.2.0 is prepared locally;
+these writer changes are unreleased.
 
-The public API exports `MsgReader` and `MsgWriter`. Message values, options and
-protocols come from `golded-ftn>=1.1.0,<2`.
+The public API exports `MsgReader`, `MsgWriter` and `MsgSession`. Message values, options and
+protocols come from `golded-ftn>=1.2.0,<2`.
 
 ```python
 from pathlib import Path
 
-from golded_ftn import OutgoingMessage, WriterOptions
+from golded_ftn import MessagePatch, OutgoingMessage
 from golded_ftn_msg import MsgReader, MsgWriter
 
 area = Path("messages")
-count = MsgWriter().write(
-    area,
-    [
+writer = MsgWriter()
+writer.create(area)
+with writer.open(area) as session:
+    added = session.append(
         OutgoingMessage(
-            from_name="Alice",
-            to_name="Bob",
-            subject="Hello",
-            body_text="First line\nSecond line",
+            from_name="Alice", to_name="Bob", subject="Hello", body_text="First line"
         )
-    ],
-    WriterOptions(target_charset="CP850"),
-)
-assert count == 1
-messages = list(MsgReader().read(area))
-assert messages[-1].subject == "Hello"
+    )
+    current = session.read(added.identity.msgno)
+    session.update(current.identity, MessagePatch(subject="Revised"), current.revision)
+assert list(MsgReader().read(area))[-1].subject == "Revised"
 ```
 
 ## Installation
@@ -81,10 +78,31 @@ Dates use English month names and the 1970–2069 two-digit year window. Invalid
 reader dates become `None`. Header addresses and INTL/FMPT/TOPT must agree.
 Provenance records the actual file path and message number; offsets are unknown.
 
-The writer appends numbered `.MSG` files using exclusive creation. It never
-replaces an existing file. Messages are validated before creation; a failed write
-removes only its current file. Earlier messages remain, so batches are not atomic.
-Successful calls return the number of completed files.
+`MsgWriter.create(path)` initializes a new area. A context-managed `open(path)`
+session provides `read`, `append`, `update` and `delete`. Updates and deletes
+require the revision returned by a consistent session read. Unrelated message
+changes do not invalidate that revision. Unknown header bytes and controls survive
+updates; attribute-only updates preserve the original text bytes. The revision
+contains format/base/message identity, the physical filename number and SHA-256
+over the raw file. Omitted patch fields stay unchanged; explicit `None` clears
+only representable optional values. `control_lines` replaces general controls;
+omitted MSGID, addresses and routing retain their structured fields. Body-only
+changes preserve controls and routing. Conflicting metadata is rejected.
+
+Appends publish a complete temporary file without replacing an existing number.
+Updates replace the complete file; deletes remove it. A sidecar lock serializes
+Python sessions and retains the highest allocated number. Each operation rolls
+back I/O failures where possible; a failed rollback poisons the session. The legacy
+`write` convenience method returns the number of completed appends. Earlier
+operations remain committed if a later one fails.
+
+Only offline FTSC editing is supported. Opus editing and `concurrent=True` are
+rejected. GoldED read/write interoperability is pending. POSIX publication uses a
+hard link; Windows uses a non-replacing rename. Windows runtime behaviour has not
+been verified. Linux execution has not been exercised here either. Process death
+and power loss are outside the rollback guarantee;
+a controlled exit test observes an unpublished temporary file after interrupted
+append.
 
 Header names allow 35 encoded bytes; subjects allow 71. Encoding is strict.
 Header fields reject nulls and line breaks. Dates must be naive, have no
@@ -96,6 +114,23 @@ control lines, charset and address kludges. Conflicting metadata is rejected.
 An external MSGID may be supplied; synthetic hash IDs cannot become MSGID.
 MSGID is never generated automatically. Provenance is not serialized. Body lines
 use CR and end with one null byte.
+
+## Development
+
+```sh
+uv sync --locked
+uv run pytest
+uv run ruff check .
+uv run ruff format --check .
+uv run mypy
+uv run python -m mypy.stubtest golded_ftn_msg
+uv build
+uv run twine check dist/*
+uv run python scripts/verify_distribution.py
+```
+
+See [writer source notes](docs/writer-sources.md) for the original GoldED layout,
+locking limits and the distinction between source evidence and build tests.
 
 ## Archive mode
 

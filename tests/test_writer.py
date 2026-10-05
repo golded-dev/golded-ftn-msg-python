@@ -4,7 +4,7 @@ import struct
 from dataclasses import replace
 from datetime import UTC, datetime
 from pathlib import Path
-from typing import Any, BinaryIO, cast
+from typing import Any
 
 import pytest
 from golded_ftn import ControlLine, FtnAddress, OutgoingMessage, WriterOptions
@@ -63,7 +63,7 @@ def test_encoded_boundaries(tmp_path: Path, field: str, limit: int) -> None:
     MsgWriter().write(tmp_path, [message(**{field: "x" * limit})])
     with pytest.raises(ValueError):
         MsgWriter().write(tmp_path, [message(**{field: "x" * (limit + 1)})])
-    assert len(list(tmp_path.iterdir())) == 1
+    assert len(list(tmp_path.glob("*.MSG"))) == 1
 
 
 def test_utf8_byte_limit_and_strict_encoding(tmp_path: Path) -> None:
@@ -133,11 +133,13 @@ def test_preserve_and_reconcile_controls(tmp_path: Path) -> None:
 
 
 def test_append_and_partial_validation_failure(tmp_path: Path) -> None:
-    (tmp_path / "009.mSg").write_bytes(b"untouched")
+    MsgWriter().write(tmp_path, [message()])
+    (tmp_path / "1.MSG").rename(tmp_path / "009.mSg")
+    original = (tmp_path / "009.mSg").read_bytes()
     (tmp_path / "junk.msg").write_bytes(b"untouched")
     with pytest.raises(ValueError):
         MsgWriter().write(tmp_path, [message(), message(subject="x" * 72)])
-    assert (tmp_path / "009.mSg").read_bytes() == b"untouched"
+    assert (tmp_path / "009.mSg").read_bytes() == original
     assert (tmp_path / "junk.msg").read_bytes() == b"untouched"
     assert (tmp_path / "10.MSG").exists()
     assert not (tmp_path / "11.MSG").exists()
@@ -146,61 +148,19 @@ def test_append_and_partial_validation_failure(tmp_path: Path) -> None:
 def test_exclusive_creation_conflict(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    original = Path.open
-    raced = False
+    from golded_ftn_msg.writer import MsgSession
 
-    def open_with_race(
-        path: Path, mode: str = "r", *args: Any, **kwargs: Any
-    ) -> BinaryIO:
-        nonlocal raced
-        if mode == "xb" and not raced:
-            raced = True
-            path.write_bytes(b"racer")
-        return cast(BinaryIO, original(path, mode, *args, **kwargs))
+    original = MsgSession._publish
 
-    monkeypatch.setattr(Path, "open", open_with_race)
-    assert MsgWriter().write(tmp_path, [message()]) == 1
+    def publish_with_race(session: MsgSession, temporary: Path, target: Path) -> None:
+        target.write_bytes(b"racer")
+        original(session, temporary, target)
+
+    monkeypatch.setattr(MsgSession, "_publish", publish_with_race)
+    with pytest.raises(FileExistsError):
+        MsgWriter().write(tmp_path, [message()])
     assert (tmp_path / "1.MSG").read_bytes() == b"racer"
-    assert (tmp_path / "2.MSG").exists()
-
-
-@pytest.mark.parametrize("failure", ["write", "short", "close"])
-def test_current_file_cleanup_on_write_failure(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, failure: str
-) -> None:
-    original = Path.open
-
-    class FailingFile:
-        def __init__(self, handle: BinaryIO) -> None:
-            self.handle = handle
-
-        def __enter__(self) -> "FailingFile":
-            return self
-
-        def __exit__(self, *args: object) -> None:
-            self.handle.close()
-            if failure == "close":
-                raise OSError("disk failure")
-
-        def write(self, data: bytes) -> int:
-            if failure == "close":
-                return self.handle.write(data)
-            self.handle.write(data[:20])
-            if failure == "short":
-                return 20
-            raise OSError("disk failure")
-
-    def failing_open(path: Path, mode: str = "r", *args: Any, **kwargs: Any) -> object:
-        handle = original(path, mode, *args, **kwargs)
-        if mode == "xb" and path.name == "2.MSG":
-            return FailingFile(cast(BinaryIO, handle))
-        return handle
-
-    monkeypatch.setattr(Path, "open", failing_open)
-    with pytest.raises(OSError):
-        MsgWriter().write(tmp_path, [message(), message()])
-    assert (tmp_path / "1.MSG").exists()
-    assert not (tmp_path / "2.MSG").exists()
+    assert not list(tmp_path.glob(".golded-ftn-msg-*"))
 
 
 @pytest.mark.parametrize(

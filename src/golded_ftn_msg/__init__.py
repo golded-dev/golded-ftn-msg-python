@@ -1,4 +1,4 @@
 from .reader import MsgReader
-from .writer import MsgWriter
+from .writer import MsgSession, MsgWriter
 
-__all__ = ["MsgReader", "MsgWriter"]
+__all__ = ["MsgReader", "MsgWriter", "MsgSession"]

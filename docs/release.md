@@ -36,7 +36,7 @@ uncommitted changes; these checks cover the working tree, not a tagged release.
 
 - `uv sync --locked`: passed.
 - Ruff lint and format checks, strict mypy: passed.
-- `uv run pytest -q`: 111 passed, 0 skipped.
+- `uv run pytest -q`: 113 passed, 0 skipped.
 - `uv build` and `uv run twine check dist/*`: passed for wheel and sdist.
 - `scripts/verify_distribution.py`: passed metadata and package-content checks,
   byte comparison against a wheel rebuilt from sdist, isolated installed-package
@@ -60,3 +60,36 @@ of this local preparation.
 
 Archive checksums are recorded separately in `RELEASE-SHA256.txt` at the
 repository root, outside the archives, after the final build.
+
+## PyPI Trusted Publishing
+
+Create a PyPI account, verify its email and configure two-factor authentication.
+For a first publication, add a pending publisher at
+<https://pypi.org/manage/account/publishing/> with these exact fields:
+
+- PyPI project: `golded-ftn-msg`
+- GitHub owner: `golded-dev`
+- GitHub repository: `golded-ftn-msg-python`
+- Workflow filename: `publish.yml`
+- Environment: `pypi`
+
+See [PyPI's pending-publisher instructions](https://docs.pypi.org/trusted-publishers/creating-a-project-through-oidc/).
+No API token or password is required by the workflow. The account setup is a
+manual prerequisite; a GitHub release does not create the PyPI project.
+
+After this tag's CI succeeds and the GitHub release contains both archives and
+`RELEASE-SHA256.txt`, run:
+
+```sh
+gh workflow run publish.yml --repo golded-dev/golded-ftn-msg-python -f tag=v1.2.0
+```
+
+The workflow verifies SHA-256 and uploads those exact release assets. Publish
+core first, verify installation from PyPI, then dispatch the format workflows.
+Confirm the workflow result, PyPI version and hashes, and installation in a fresh
+environment. Do not store publishing credentials in this repository.
+
+The first remote Windows run found temporary-file cleanup before descriptor
+closure and a POSIX-only directory-flush count in fault tests. Cleanup now closes
+the descriptor first; regression tests cover both write and flush failures.
+The fault-step count follows each platform’s actual I/O sequence.

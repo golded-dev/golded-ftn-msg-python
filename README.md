@@ -2,11 +2,16 @@
 
 Repository: [`golded-ftn-msg-python`](https://github.com/golded-dev/golded-ftn-msg-python).
 The distribution remains `golded-ftn-msg`; imports use `golded_ftn_msg`.
-The source is public on GitHub. This package has not been released on PyPI.
+The source is public on GitHub. [Version 1.2.0 is available on PyPI](https://pypi.org/project/golded-ftn-msg/1.2.0/).
+
+Install with Python 3.12 or newer:
+
+```sh
+python -m pip install golded-ftn-msg==1.2.0
+```
 
 Read FTSC and Opus `.MSG` areas with a 190-byte header; write classic FTSC headers.
-Python 3.12 or newer. MIT licensed. Version 1.2.0 is prepared locally;
-these writer changes are unreleased.
+Python 3.12 or newer. MIT licensed.
 
 The public API exports `MsgReader`, `MsgWriter` and `MsgSession`. Message values, options and
 protocols come from `golded-ftn>=1.2.0,<2`.

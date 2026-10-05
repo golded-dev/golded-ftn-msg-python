@@ -352,13 +352,14 @@ class MsgSession:
         fd, name = tempfile.mkstemp(prefix=".golded-ftn-msg-", dir=self.base)
         path = Path(name)
         try:
-            self._io.write(fd, 0, data)
-            self._io.flush(fd)
+            try:
+                self._io.write(fd, 0, data)
+                self._io.flush(fd)
+            finally:
+                os.close(fd)
         except BaseException:
             path.unlink()
             raise
-        finally:
-            os.close(fd)
         return path
 
     def _flush_area(self) -> None:

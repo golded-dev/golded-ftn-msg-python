@@ -2,6 +2,8 @@
 
 ## 1.2.0 — 2026-10-05
 
+- Close temporary files before error cleanup on Windows.
+
 - Strip development-only uv sources from source distributions.
 
 - Add offline FTSC create/read/append/update/delete sessions and revision conflicts.

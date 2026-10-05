@@ -274,6 +274,8 @@ def test_clear_controls_routing_addresses_and_links(tmp_path: Path) -> None:
     "operation,steps", [("append", 5), ("update", 3), ("delete", 3)]
 )
 def test_fault_boundaries(tmp_path: Path, operation: str, steps: int) -> None:
+    if os.name == "nt":
+        steps -= 1  # Windows has no directory fsync step.
     for step in range(1, steps + 1):
         base = tmp_path / str(step)
         writer = MsgWriter()
@@ -381,3 +383,35 @@ def test_corrupt_base_and_invalid_patch(tmp_path: Path) -> None:
         (tmp_path / "1.MSG").write_bytes(b"bad")
         with pytest.raises(ParserException):
             session.append(message())
+
+
+@pytest.mark.parametrize("failure", ["write", "flush"])
+def test_temp_failure_closes_descriptor_before_cleanup(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, failure: str
+) -> None:
+    class FailTemp(IO):
+        descriptor = -1
+
+        def write(self, fd: int, offset: int, data: bytes) -> None:
+            self.descriptor = fd
+            if failure == "write":
+                raise OSError("injected")
+            super().write(fd, offset, data)
+
+        def flush(self, fd: int) -> None:
+            raise OSError("injected")
+
+    io = FailTemp()
+    unlink = Path.unlink
+
+    def require_closed(path: Path, missing_ok: bool = False) -> None:
+        with pytest.raises(OSError):
+            os.fstat(io.descriptor)
+        unlink(path, missing_ok=missing_ok)
+
+    with MsgWriter().open(tmp_path) as session:
+        session._io = io
+        monkeypatch.setattr(Path, "unlink", require_closed)
+        with pytest.raises(OSError, match="injected"):
+            session.append(message())
+    assert not list(tmp_path.glob(".golded-ftn-msg-*"))

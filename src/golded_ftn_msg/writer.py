@@ -1,4 +1,4 @@
-"""Offline editing sessions for classic FTSC messages."""
+"""Offline editing sessions for explicit FTSC and Opus messages."""
 
 from __future__ import annotations
 
@@ -118,7 +118,26 @@ def _validate_addresses(message: OutgoingMessage, controls: list[ControlLine]) -
         declarations[name] = value
 
 
-def _serialize(message: OutgoingMessage, charset: str) -> bytes:
+def _opus_timestamp(value: datetime | None) -> bytes:
+    if value is None:
+        return bytes(4)
+    if (
+        value.tzinfo is not None
+        or value.microsecond
+        or value.second % 2
+        or not 1980 <= value.year <= 2069
+    ):
+        raise ValueError("Opus date must be naive, even-second precision, in 1980–2069")
+    date = ((value.year - 1980) << 9) | (value.month << 5) | value.day
+    time = (value.hour << 11) | (value.minute << 5) | (value.second // 2)
+    return struct.pack("<HH", date, time)
+
+
+def _serialize(
+    message: OutgoingMessage,
+    charset: str,
+    header_format: Literal["ftsc", "opus"] = "ftsc",
+) -> bytes:
     header = bytearray(HEADER_SIZE)
     for name in ("from_name", "to_name", "subject"):
         value = getattr(message, name)
@@ -129,6 +148,7 @@ def _serialize(message: OutgoingMessage, charset: str) -> bytes:
         if len(encoded) >= size:
             raise ValueError(f"{name} exceeds {size - 1} encoded bytes")
         header[offset : offset + len(encoded)] = encoded
+    timestamp = _opus_timestamp(message.posted_at) if header_format == "opus" else None
     date = format_date(message.posted_at)
     header[144 : 144 + len(date)] = date
     words = dict.fromkeys(WORD_OFFSETS, 0)
@@ -192,6 +212,9 @@ def _serialize(message: OutgoingMessage, charset: str) -> bytes:
         level = 4 if canonical == "utf-8" else 1 if canonical == "ascii" else 2
         add("CHRS", f"{label} {level}")
     _validate_addresses(message, controls)
+    if header_format == "opus":
+        for side in ("from", "to"):
+            words[f"{side}_zone"] = words[f"{side}_point"] = 0
     resolve_addresses(words, controls)
     if message.from_address is not None and message.to_address is not None:
         if not any(c.name.upper() == "INTL" for c in controls):
@@ -208,9 +231,30 @@ def _serialize(message: OutgoingMessage, charset: str) -> bytes:
             and not any(c.name.upper() == name for c in controls)
         ):
             add(name, str(address.point))
-    resolve_addresses(words, controls)
+    resolved_origin, resolved_destination = resolve_addresses(words, controls)
+    if header_format == "opus":
+        for explicit, represented in (
+            (message.from_address, resolved_origin),
+            (message.to_address, resolved_destination),
+        ):
+            if explicit is not None and (
+                represented is None
+                or (explicit.zone, explicit.net, explicit.node, explicit.point or 0)
+                != (
+                    represented.zone,
+                    represented.net,
+                    represented.node,
+                    represented.point or 0,
+                )
+            ):
+                raise ValueError(
+                    "Opus zones require INTL with both origin and destination"
+                )
     for name, offset in WORD_OFFSETS.items():
         struct.pack_into("<H", header, offset, words[name])
+    if timestamp is not None:
+        header[176:180] = timestamp
+        header[180:184] = bytes(4)
     prefix = "".join(f"\x01{c.name}: {c.value}\n" for c in added)
     raw = (
         bytes(header)
@@ -222,9 +266,16 @@ def _serialize(message: OutgoingMessage, charset: str) -> bytes:
 
 
 class MsgWriter:
-    """FTSC mutation sessions. GoldED must remain closed."""
+    """Explicit FTSC/Opus mutation sessions. GoldED must remain closed."""
 
-    def create(self, path: str | PathLike[str]) -> None:
+    def create(
+        self,
+        path: str | PathLike[str],
+        *,
+        header_format: Literal["ftsc", "opus"] = "ftsc",
+    ) -> None:
+        if header_format not in {"ftsc", "opus"}:
+            raise ValueError("header_format must be 'ftsc' or 'opus'")
         area = Path(path)
         if area.exists() and any(area.iterdir()):
             raise FileExistsError(str(area))
@@ -237,30 +288,44 @@ class MsgWriter:
         *,
         header_format: Literal["ftsc", "opus"] = "ftsc",
     ) -> MsgSession:
-        if header_format != "ftsc":
-            raise UnsupportedOperationError("Opus editing is not supported")
-        return MsgSession(Path(path).resolve(), options or WriterOptions())
+        if header_format not in {"ftsc", "opus"}:
+            raise ValueError("header_format must be 'ftsc' or 'opus'")
+        return MsgSession(
+            Path(path).resolve(), options or WriterOptions(), header_format
+        )
 
     def write(
         self,
         path: str | PathLike[str],
         messages: Iterable[OutgoingMessage],
         options: WriterOptions | None = None,
+        *,
+        header_format: Literal["ftsc", "opus"] = "ftsc",
     ) -> int:
         # The batch convenience method uses the same per-message commit boundary.
         area = Path(path)
         area.mkdir(parents=True, exist_ok=True)
         count = 0
         for message in messages:
-            _serialize(message, (options or WriterOptions()).target_charset)
-            with self.open(area, options) as session:
+            _serialize(
+                message, (options or WriterOptions()).target_charset, header_format
+            )
+            with self.open(area, options, header_format=header_format) as session:
                 session.append(message)
             count += 1
         return count
 
 
 class MsgSession:
-    def __init__(self, base: Path, options: WriterOptions) -> None:
+    def __init__(
+        self,
+        base: Path,
+        options: WriterOptions,
+        header_format: Literal["ftsc", "opus"] = "ftsc",
+    ) -> None:
+        if header_format not in {"ftsc", "opus"}:
+            raise ValueError("header_format must be 'ftsc' or 'opus'")
+        self.header_format = header_format
         if options.concurrent:
             raise UnsupportedOperationError("MSG does not share a GoldED lock")
         if not base.is_dir():
@@ -303,7 +368,7 @@ class MsgSession:
                     raise ParserException("Ambiguous or unsafe MSG filename")
                 raw = entry.read_bytes()
                 _validate_metadata(raw, self.options.target_charset)
-                MsgReader()._read_file(
+                MsgReader(self.header_format)._read_file(
                     entry,
                     number,
                     ReaderOptions(fallback_charset=self.options.target_charset),
@@ -313,7 +378,11 @@ class MsgSession:
             yield fd, records
 
     def _identity(self, number: int) -> MessageIdentity:
-        return MessageIdentity(format="msg", base=str(self.base), msgno=number)
+        return MessageIdentity(
+            format="opus" if self.header_format == "opus" else "msg",
+            base=str(self.base),
+            msgno=number,
+        )
 
     def _revision(self, number: int, raw: bytes) -> RevisionToken:
         return raw_revision(self._identity(number), (number,), raw)
@@ -336,7 +405,7 @@ class MsgSession:
             if msgno not in records:
                 raise ConflictError("MSG target is missing")
             path, raw = records[msgno]
-            message, _issue = MsgReader()._read_file(
+            message, _issue = MsgReader(self.header_format)._read_file(
                 path,
                 msgno,
                 ReaderOptions(fallback_charset=self.options.target_charset),
@@ -377,7 +446,7 @@ class MsgSession:
             os.link(temporary, target)  # Atomic complete-file publication, no clobber.
 
     def append(self, message: OutgoingMessage) -> WriteResult:
-        data = _serialize(message, self.options.target_charset)
+        data = _serialize(message, self.options.target_charset, self.header_format)
         with self._operation() as (fd, records):
             saved = self._io.read(fd, 0, os.fstat(fd).st_size)
             if saved and len(saved) != 8:
@@ -504,7 +573,7 @@ class MsgSession:
             )
         with self._operation() as (_fd, records):
             path, original = self._target(records, identity, expected_revision)
-            parsed, _issue = MsgReader()._read_file(
+            parsed, _issue = MsgReader(self.header_format)._read_file(
                 path,
                 identity.msgno,
                 ReaderOptions(fallback_charset=self.options.target_charset),
@@ -544,7 +613,10 @@ class MsgSession:
                     raise ValueError(f"{name} exceeds {size - 1} encoded bytes")
                 header[offset : offset + size] = encoded + bytes(size - len(encoded))
             if patch.posted_at is not UNSET:
-                date = format_date(cast(datetime | None, patch.posted_at))
+                value = cast(datetime | None, patch.posted_at)
+                if self.header_format == "opus":
+                    header[176:180] = _opus_timestamp(value)
+                date = format_date(value)
                 header[144:164] = date + bytes(20 - len(date))
             for name, word in (
                 ("attributes_raw", "attributes"),
@@ -649,21 +721,28 @@ class MsgSession:
                     routing_seen_by=seen_by,
                     routing_path=route,
                 )
-                rebuilt = _serialize(outgoing, self.options.target_charset)
+                rebuilt = _serialize(
+                    outgoing, self.options.target_charset, self.header_format
+                )
                 for side, value in (
                     ("from", patch.from_address),
                     ("to", patch.to_address),
                 ):
                     if value is UNSET:
                         continue
-                    for part in ("zone", "net", "node", "point"):
+                    parts = (
+                        ("net", "node")
+                        if self.header_format == "opus"
+                        else ("zone", "net", "node", "point")
+                    )
+                    for part in parts:
                         offset = WORD_OFFSETS[f"{side}_{part}"]
                         header[offset : offset + 2] = rebuilt[offset : offset + 2]
                 data = bytes(header) + rebuilt[190:]
             else:
                 data = bytes(header) + original[190:]
             _validate_metadata(data, self.options.target_charset)
-            MsgReader()._read_file(
+            MsgReader(self.header_format)._read_file(
                 path,
                 identity.msgno,
                 ReaderOptions(fallback_charset=self.options.target_charset),

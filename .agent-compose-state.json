@@ -2,10 +2,10 @@
   "config_sha256": "1296478cf7017b9d827e2a6dbdbf802fdd00c0851d9fa89bcd85a4115a862fc3",
   "outputs": {
     "AGENTS.md": {
-      "sha256": "092848f3d04a43325ca41011850651259965104370c30cfe712a1e7a77299210",
+      "sha256": "53cde75b26a1531a5906b2ff9fc732aece540e640499cc9c0f6d7b672bf510f2",
       "sources": [
         {
-          "sha256": "088dc306d9ed825a09ef9f07b439fc98fefbe00ce484d787b1c191e3711ddab6",
+          "sha256": "8fa50db436e4377685ebd254f10f48ee50cd907d7bb4ac01d36aa68dfa9852ac",
           "source": "local:project.md"
         },
         {

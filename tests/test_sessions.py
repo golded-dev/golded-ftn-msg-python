@@ -195,8 +195,8 @@ def test_session_lifecycle_and_revision_conflicts(tmp_path: Path) -> None:
         writer.create(tmp_path)
     with pytest.raises(UnsupportedOperationError):
         writer.open(tmp_path, WriterOptions(concurrent=True))
-    with pytest.raises(UnsupportedOperationError):
-        writer.open(tmp_path, header_format="opus")
+    with pytest.raises(ValueError):
+        writer.open(tmp_path, header_format="invalid")  # type: ignore[arg-type]
 
 
 def test_independent_header_preservation(tmp_path: Path) -> None:

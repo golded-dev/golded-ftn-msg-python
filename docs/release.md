@@ -1,6 +1,6 @@
 # Release checklist
 
-The repository prepares version 1.2.0. Tags, remote setup and publication are
+The working tree prepares version 1.3.0 (unreleased). Tags, remote setup and publication are
 separate actions and require explicit authorization.
 
 1. Review the scope and changelog. Confirm the version and core dependency range.
@@ -114,3 +114,20 @@ format CRUD examples. GoldED interoperability remains deferred.
 The tagged archives retain the pre-publication documentation used during their
 review. Current GitHub documentation records publication; the release tag,
 archives and checksum manifest remain unchanged.
+
+## Local 1.3.0 Opus extension — 2026-10-06
+
+Unreleased working tree on macOS 27.0 arm64. `uv run pytest -q` and isolated
+Python 3.12 tests each passed 127 tests. Ruff lint/format, strict mypy,
+agent-compose preview/build/check and `git diff --check` passed. Wheel/sdist
+builds, twine checks and scripts/verify_distribution.py passed, including identical
+rebuilt wheel contents and both clean installed-package test/typing/stubtest suites.
+Dependency installation used a locally built core 1.2.2 wheel.
+
+Opus tests check explicit variant selection, literal written/arrived/reply bytes,
+raw metadata preservation, address conflicts, strict date limits, stale revisions,
+CRUD operations and controlled rollback. Inspected GoldED timestamp/read/write
+source in golded-linux-macos (checkout HEAD 5130b205b473ea6688f678cde026be49fc140210).
+No native GoldED Opus interoperability check was performed. That remains a
+release gate; Linux/Windows execution and concurrent use remain unverified.
+Local checks for 1.3.0 passed on 2026-10-07. Publication is a separate step.

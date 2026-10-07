@@ -10,7 +10,9 @@ Install with Python 3.12 or newer:
 python -m pip install golded-ftn-msg==1.2.0
 ```
 
-Read FTSC and Opus `.MSG` areas with a 190-byte header; write classic FTSC headers.
+Read and write explicit FTSC and Opus `.MSG` areas with a 190-byte header.
+The local 1.3.0 development version adds Opus writing; the published 1.2.0
+version writes FTSC only.
 Python 3.12 or newer. MIT licensed.
 
 The public API exports `MsgReader`, `MsgWriter` and `MsgSession`. Message values, options and
@@ -70,7 +72,21 @@ The written timestamp supplies a naive date with two-second precision, using
 1980–2107; zero or invalid written timestamps fall back to the textual date.
 Addresses use header net/node plus INTL/FMPT/TOPT, without treating timestamp
 bits as address metadata. Opus provenance uses `source_type="opus"`; FTSC
-provenance remains `"msg"`. The writer continues to produce FTSC headers.
+provenance remains `"msg"`. Use `MsgWriter().create(path, header_format="opus")` and
+`MsgWriter().open(path, header_format="opus")` for Opus writing. Selection is
+explicit on each operation; it does not detect or convert an existing variant.
+`write(..., header_format="opus")` uses the same selection.
+
+New Opus `posted_at` values must be naive, 1980–2069, without microseconds and
+with even seconds. The DOS fields can encode 1980–2107, but the textual MSG date
+and GoldED's read path impose the narrower writer range. Odd seconds are rejected,
+not rounded. None writes zero DOS written words and an empty textual date.
+New arrived words are zero because `OutgoingMessage` has no arrival date field.
+Updates preserve arrived words and unknown header bytes; only a posted_at patch
+changes written words and textual date. Existing invalid/zero written words retain
+the reader's textual fallback. Zones/points use INTL/FMPT/TOPT. A nonzero zone
+requires both addresses or a consistent INTL declaration; incomplete representation
+is rejected before mutation. GoldED interoperability is still unverified.
 
 The reader accepts positive numeric filenames with case-insensitive `.msg`
 extensions. It sorts numerically and rejects duplicate message numbers.

@@ -1,5 +1,15 @@
 # Changelog
 
+## 1.3.0 — 2026-10-07
+
+- Add explicit Opus create/read/append/update/delete sessions and Opus identities.
+- Write DOS timestamps with strict even-second dates in 1980–2069; initialize
+  arrived words to zero and preserve them on updates.
+- Represent zones/points through INTL/FMPT/TOPT and reject incomplete or conflicting
+  address metadata before mutation. Preserve existing FTSC behavior.
+- Check literal timestamp headers, external metadata, stale revisions and rollback.
+
+
 ## 1.2.0 — 2026-10-05
 
 - Close temporary files before error cleanup on Windows.

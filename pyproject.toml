@@ -4,8 +4,8 @@ build-backend = "hatchling.build"
 
 [project]
 name = "golded-ftn-msg"
-version = "1.2.0"
-description = "Reader and writer for classic FTSC-style 190-byte MSG areas"
+version = "1.3.0"
+description = "Reader and writer for explicit FTSC and Opus 190-byte MSG areas"
 readme = "README.md"
 requires-python = ">=3.12"
 license = "MIT"

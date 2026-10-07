@@ -1,2 +1,2 @@
-8485c5d071403274f09f601cc0b6f985d79039fc6a1af9b9396e673358f372b4  dist/golded_ftn_msg-1.2.0-py3-none-any.whl
-72d8036fc566b249aea68536e5209f0c88c8b84d650cad2efd79104fe40bbe55  dist/golded_ftn_msg-1.2.0.tar.gz
+e78fb55a36429005c93b101c133db0ad557b7e44a2c30d6b8ee317dbf00d4314  dist/golded_ftn_msg-1.3.0-py3-none-any.whl
+705b4671c67f221e166fdae5dd2212a7845b705f491a79b8acd8c5b0d940ccce  dist/golded_ftn_msg-1.3.0.tar.gz

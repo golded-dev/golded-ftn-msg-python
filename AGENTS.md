@@ -1,7 +1,9 @@
 # golded-ftn-msg
 
 This Python package reads FTSC and explicit Opus .MSG areas with a 190-byte
-header; the writer produces FTSC only. Opus timestamp words are not addresses.
+header; writers require explicit FTSC or Opus selection. Opus timestamp words
+are not addresses. Preserve arrived timestamps; new Opus dates must be naive,
+even-second precision, in 1980–2069.
 Shared values and protocols belong to golded-ftn. Discovery and databases belong
 to callers.
 

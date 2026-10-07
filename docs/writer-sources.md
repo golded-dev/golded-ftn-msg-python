@@ -14,8 +14,8 @@ Reference checkout: `golded-open-source`, commit
   builds a cached sorted message index. External publication does not by itself
   establish safe refresh in a running GoldED.
 
-Python writes FTSC only. Explicit Opus reading remains supported, but Opus
-mutation is rejected because its timestamp words are not FTSC addresses.
+Python writes explicitly selected FTSC or Opus headers. The local 1.3.0
+implementation adds Opus sessions; 1.2.0 remains FTSC-only.
 `create` initializes an empty area. Opening a session bootstraps the private
 `.golded-ftn-msg.lock` numbering sidecar. Existing directory contents are rejected. Existing lastread files are
 untouched during editing. Each operation uses the shared sidecar descriptor and
@@ -45,3 +45,15 @@ Only macOS runtime tests have been run in this checkout. Linux and Windows
 execution are unverified. GoldED build, read/write interoperability and refresh
 checks are deferred. `concurrent=True` is rejected on every platform; keep GoldED
 closed and avoid direct base-file access during session operations.
+
+## Opus timestamp reference
+
+Inspected `golded-linux-macos/goldlib/gall/gtimall.h` (`gopustime`),
+`gtimutil.cpp` (`TimeToFTime`), and `goldlib/gmb3/gmofido3.cpp` / `gmofido4.cpp`.
+The packed Opus words are date then time at 176–179, arrived at 180–183.
+`gmofido3.cpp` reads binary timestamps and then overwrites written with the
+textual date. New Python-written dates therefore use the shared 1980–2069
+range and even seconds. Omitted dates/arrived timestamps are zero; arrived has
+no caller field in the core model. Updates preserve raw arrived bytes.
+This source inspection and the literal Python fixtures do not establish runtime
+GoldED interoperability. That remains a release gate, separate from concurrency.

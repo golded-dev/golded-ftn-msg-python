@@ -131,3 +131,15 @@ source in golded-linux-macos (checkout HEAD 5130b205b473ea6688f678cde026be49fc14
 No native GoldED Opus interoperability check was performed. That remains a
 release gate; Linux/Windows execution and concurrent use remain unverified.
 Local checks for 1.3.0 passed on 2026-10-07. Publication is a separate step.
+
+## Published 1.3.0 — 2026-10-07
+
+[PyPI](https://pypi.org/project/golded-ftn-msg/1.3.0/) and
+[GitHub](https://github.com/golded-dev/golded-ftn-msg-python/releases/tag/v1.3.0)
+provide the reviewed wheel and sdist. The
+[publishing workflow](https://github.com/golded-dev/golded-ftn-msg-python/actions/runs/37581780480)
+passed with Trusted Publishing. CI for the tag passed on Linux 3.12–3.14,
+macOS and Windows. PyPI SHA-256 values match `RELEASE-SHA256.txt`.
+
+The tag, archives and checksum manifest stay at `e5a851d`. GoldED
+interoperability and concurrent use remain unverified.
